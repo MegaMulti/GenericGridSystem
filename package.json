@@ -1,0 +1,12 @@
+{
+  "name": "com.megamulti.grid",
+  "version": "1.0.0",
+  "displayName": "MegaMulti Grid",
+  "description": "Generic Grid For Unity",
+  "unity": "2021.3",
+  "author": {
+    "name": "MegaMutli",
+    "email": "sviatoslav.vas@gmail.com",
+    "url": "https://github.com/MegaMulti"
+  }
+}

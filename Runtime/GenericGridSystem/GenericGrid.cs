@@ -64,6 +64,11 @@ namespace MegaMulti.GenericGridSystem
 			return reverseCells.TryGetValue(value, out var gridPosition) ? gridPosition : default;
 		}
 
+		public Vector3 GetWorldPosition(T value)
+		{
+			return CalculateWorldPosition(GetGridPosition(value));
+		}
+
 		public bool IsPositionValid(int x, int y)
 		{
 			var validX = MaxWidth <= 0 || (x >= 0 && x < MaxWidth);

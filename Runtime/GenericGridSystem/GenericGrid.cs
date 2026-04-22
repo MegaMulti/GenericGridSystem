@@ -18,10 +18,10 @@ namespace MegaMulti.GenericGridSystem
 		{
 			if (cellSize == Vector2.zero)
 				cellSize = Vector2.one;
-			
+
 			if (cellSize.x <= 0 || cellSize.y <= 0)
 				throw new ArgumentException("MegaMulti.Grid: cellSize must be positive");
-			
+
 			MaxWidth = maxWidth;
 			MaxHeight = maxHeight;
 			CellSize = cellSize;
@@ -32,140 +32,116 @@ namespace MegaMulti.GenericGridSystem
 		}
 
 		#region Helpers
-		
+
 		public static Vector3 CalculateWorldPosition(int x, int y, Vector2 cellSize, Vector3 offset) =>
 			new Vector3(x * cellSize.x, y * cellSize.y, 0f) + offset;
 
 		public static Vector3 CalculateWorldPosition(Vector2Int gridPosition, Vector2 cellSize, Vector3 offset) =>
 			CalculateWorldPosition(gridPosition.x, gridPosition.y, cellSize, offset);
-		
+
 		public static Vector2Int CalculateGridPosition(Vector3 worldPosition, Vector2 cellSize, Vector3 offset) =>
 			new Vector2Int(
 				Mathf.FloorToInt((worldPosition.x - offset.x) / cellSize.x),
 				Mathf.FloorToInt((worldPosition.y - offset.y) / cellSize.y)
 			);
-		
+
 		#endregion
 
 
 		#region Basic Methods
 
-		public bool TryGetWorldPosition(int x, int y, out Vector3 worldPosition)
+		public Vector3? GetWorldPosition(int x, int y)
 		{
 			if (!IsPositionValid(x, y))
-			{
-				worldPosition = default;
-				return false;
-			}
+				return null;
 
-			worldPosition = CalculateWorldPosition(x, y, CellSize, Offset);
-			return true;
+			return CalculateWorldPosition(x, y, CellSize, Offset);
 		}
 
-		public bool TryGetWorldPosition(Vector2Int gridPosition, out Vector3 worldPosition) =>
-			TryGetWorldPosition(gridPosition.x, gridPosition.y, out worldPosition);
+		public Vector3? GetWorldPosition(Vector2Int gridPosition) =>
+			GetWorldPosition(gridPosition.x, gridPosition.y);
 
-		public bool TryGetGridPosition(Vector3 worldPosition, out Vector2Int gridPosition)
+		public Vector2Int? GetGridPosition(Vector3 worldPosition)
 		{
 			if (!IsPositionValid(worldPosition))
-			{
-				gridPosition = default;
-				return false;
-			}
+				return null;
 
-			gridPosition = CalculateGridPosition(worldPosition, CellSize, Offset);
-			return true;
+			return CalculateGridPosition(worldPosition, CellSize, Offset);
 		}
 
-		public bool TryGetGridPosition(T value, out Vector2Int gridPosition) =>
-			reverseCells.TryGetValue(value, out gridPosition);
-		
-		public bool TrySet(int x, int y, T value)
+		public Vector2Int? GetGridPosition(T value) =>
+			reverseCells.TryGetValue(value, out var gridPosition) ? gridPosition : null;
+
+		public void Set(int x, int y, T value)
 		{
 			if (!IsPositionValid(x, y))
-				return false;
+				return;
 
 			var pos = new Vector2Int(x, y);
 
 			if (cells.TryGetValue(pos, out T oldValue))
-			{
 				reverseCells.Remove(oldValue);
-			}
 
 			if (reverseCells.TryGetValue(value, out Vector2Int oldPos))
-			{
 				cells.Remove(oldPos);
-			}
 
 			cells[pos] = value;
 			reverseCells[value] = pos;
-
-			return true;
 		}
-		
-		public bool TrySet(Vector3 worldPosition, T value) =>
-			TrySet(CalculateGridPosition(worldPosition, CellSize, Offset), value);
 
-		public bool TrySet(Vector2Int gridPosition, T value) =>
-			TrySet(gridPosition.x, gridPosition.y, value);
+		public void Set(Vector3 worldPosition, T value) =>
+			Set(CalculateGridPosition(worldPosition, CellSize, Offset), value);
 
-		public bool TryGet(int x, int y, out T value)
+		public void Set(Vector2Int gridPosition, T value) =>
+			Set(gridPosition.x, gridPosition.y, value);
+
+		public T Get(int x, int y)
 		{
 			if (!IsPositionValid(x, y))
-			{
-				value = default;
-				return false;
-			}
+				return default;
 
-			return cells.TryGetValue(new Vector2Int(x, y), out value);
+			cells.TryGetValue(new Vector2Int(x, y), out T value);
+			return value;
 		}
-		
-		public bool TryGet(Vector3 worldPosition, out T value) =>
-			TryGet(CalculateGridPosition(worldPosition, CellSize, Offset), out value);
 
-		public bool TryGet(Vector2Int gridPosition, out T value) =>
-			TryGet(gridPosition.x, gridPosition.y, out value);
+		public T Get(Vector3 worldPosition) =>
+			Get(CalculateGridPosition(worldPosition, CellSize, Offset));
 
-		public bool TryRemove(int x, int y)
+		public T Get(Vector2Int gridPosition) =>
+			Get(gridPosition.x, gridPosition.y);
+
+		public void Remove(int x, int y)
 		{
 			if (!IsPositionValid(x, y))
-				return false;
+				return;
 
 			var pos = new Vector2Int(x, y);
 
-			if (!cells.Remove(pos, out T value))
-				return false;
-
-			reverseCells.Remove(value);
-
-			return true;
+			if (cells.Remove(pos, out T value))
+				reverseCells.Remove(value);
 		}
 
-		public bool TryRemove(Vector3 worldPosition) =>
-			TryRemove(CalculateGridPosition(worldPosition, CellSize, Offset));
+		public void Remove(Vector3 worldPosition) =>
+			Remove(CalculateGridPosition(worldPosition, CellSize, Offset));
 
-		public bool TryRemove(Vector2Int gridPosition) =>
-			TryRemove(gridPosition.x, gridPosition.y);
+		public void Remove(Vector2Int gridPosition) =>
+			Remove(gridPosition.x, gridPosition.y);
 
-		public bool TryRemove(T value)
+		public void Remove(T value)
 		{
-			if (!TryGetGridPosition(value, out Vector2Int pos))
-				return false;
-
-			return TryRemove(pos);
+			var pos = GetGridPosition(value);
+			if (pos.HasValue)
+				Remove(pos.Value);
 		}
-			
 
 		public bool Contains(int x, int y)
 		{
 			if (!IsPositionValid(x, y))
-			{
 				return false;
-			}
 
 			return cells.ContainsKey(new Vector2Int(x, y));
 		}
-		
+
 		public bool Contains(Vector3 worldPosition) =>
 			Contains(CalculateGridPosition(worldPosition, CellSize, Offset));
 
@@ -174,10 +150,8 @@ namespace MegaMulti.GenericGridSystem
 
 		public bool Contains(T value)
 		{
-			if (!TryGetGridPosition(value, out Vector2Int pos))
-				return false;
-
-			return Contains(pos);
+			var pos = GetGridPosition(value);
+			return pos.HasValue && Contains(pos.Value);
 		}
 
 		public bool IsPositionValid(int x, int y)
@@ -198,106 +172,98 @@ namespace MegaMulti.GenericGridSystem
 
 		#region Move Methods
 
-		public bool TryMove(int fromX, int fromY, int toX, int toY)
+		public void Move(int fromX, int fromY, int toX, int toY)
 		{
 			if (!IsPositionValid(fromX, fromY) || !IsPositionValid(toX, toY))
-				return false;
+				return;
 
 			var from = new Vector2Int(fromX, fromY);
 			var to = new Vector2Int(toX, toY);
 
-			if (!cells.TryGetValue(from, out T value))
-				return false;
-
-			if (from == to)
-				return true;
-
-			if (cells.ContainsKey(to))
-				return false;
+			if (!cells.TryGetValue(from, out T value) || from == to || cells.ContainsKey(to))
+				return;
 
 			cells.Remove(from);
 			cells[to] = value;
 			reverseCells[value] = to;
-
-			return true;
 		}
 
-		public bool TryMove(Vector2Int fromGridPosition, Vector2Int toGridPosition) =>
-			TryMove(fromGridPosition.x, fromGridPosition.y, toGridPosition.x, toGridPosition.y);
+		public void Move(Vector2Int fromGridPosition, Vector2Int toGridPosition) =>
+			Move(fromGridPosition.x, fromGridPosition.y, toGridPosition.x, toGridPosition.y);
 
-		public bool TryMove(int fromX, int fromY, Vector2Int toGridPosition) =>
-			TryMove(fromX, fromY, toGridPosition.x, toGridPosition.y);
+		public void Move(int fromX, int fromY, Vector2Int toGridPosition) =>
+			Move(fromX, fromY, toGridPosition.x, toGridPosition.y);
 
-		public bool TryMove(Vector2Int fromGridPosition, int toX, int toY) =>
-			TryMove(fromGridPosition.x, fromGridPosition.y, toX, toY);
+		public void Move(Vector2Int fromGridPosition, int toX, int toY) =>
+			Move(fromGridPosition.x, fromGridPosition.y, toX, toY);
 
-		public bool TryMove(Vector3 fromWorldPosition, Vector3 toWorldPosition) =>
-			TryMove(
+		public void Move(Vector3 fromWorldPosition, Vector3 toWorldPosition) =>
+			Move(
 				CalculateGridPosition(fromWorldPosition, CellSize, Offset),
 				CalculateGridPosition(toWorldPosition, CellSize, Offset)
 			);
 
-		public bool TryMove(Vector3 fromWorldPosition, Vector2Int toGridPosition) =>
-			TryMove(CalculateGridPosition(fromWorldPosition, CellSize, Offset), toGridPosition);
+		public void Move(Vector3 fromWorldPosition, Vector2Int toGridPosition) =>
+			Move(CalculateGridPosition(fromWorldPosition, CellSize, Offset), toGridPosition);
 
-		public bool TryMove(Vector2Int fromGridPosition, Vector3 toWorldPosition) =>
-			TryMove(fromGridPosition, CalculateGridPosition(toWorldPosition, CellSize, Offset));
+		public void Move(Vector2Int fromGridPosition, Vector3 toWorldPosition) =>
+			Move(fromGridPosition, CalculateGridPosition(toWorldPosition, CellSize, Offset));
 
-		public bool TryMoveDirection(int fromX, int fromY, int directionX, int directionY) =>
-			TryMove(fromX, fromY, fromX + directionX, fromY + directionY);
+		public void MoveDirection(int fromX, int fromY, int directionX, int directionY) =>
+			Move(fromX, fromY, fromX + directionX, fromY + directionY);
 
-		public bool TryMoveDirection(int fromX, int fromY, Vector2Int direction) =>
-			TryMoveDirection(fromX, fromY, direction.x, direction.y);
+		public void MoveDirection(int fromX, int fromY, Vector2Int direction) =>
+			MoveDirection(fromX, fromY, direction.x, direction.y);
 
-		public bool TryMoveDirection(Vector2Int fromGridPosition, Vector2Int direction) =>
-			TryMoveDirection(fromGridPosition.x, fromGridPosition.y, direction.x, direction.y);
+		public void MoveDirection(Vector2Int fromGridPosition, Vector2Int direction) =>
+			MoveDirection(fromGridPosition.x, fromGridPosition.y, direction.x, direction.y);
 
-		public bool TryMoveDirection(Vector3 fromWorldPosition, int directionX, int directionY) =>
-			TryMoveDirection(CalculateGridPosition(fromWorldPosition, CellSize, Offset), new Vector2Int(directionX, directionY));
+		public void MoveDirection(Vector3 fromWorldPosition, int directionX, int directionY) =>
+			MoveDirection(CalculateGridPosition(fromWorldPosition, CellSize, Offset), new Vector2Int(directionX, directionY));
 
-		public bool TryMoveDirection(Vector3 fromWorldPosition, Vector2Int direction) =>
-			TryMoveDirection(CalculateGridPosition(fromWorldPosition, CellSize, Offset), direction);
+		public void MoveDirection(Vector3 fromWorldPosition, Vector2Int direction) =>
+			MoveDirection(CalculateGridPosition(fromWorldPosition, CellSize, Offset), direction);
 
-		public bool TryMoveUp(int fromX, int fromY) =>
-			TryMoveDirection(fromX, fromY, 0, 1);
+		public void MoveUp(int fromX, int fromY) =>
+			MoveDirection(fromX, fromY, 0, 1);
 
-		public bool TryMoveUp(Vector2Int fromGridPosition) =>
-			TryMoveUp(fromGridPosition.x, fromGridPosition.y);
+		public void MoveUp(Vector2Int fromGridPosition) =>
+			MoveUp(fromGridPosition.x, fromGridPosition.y);
 
-		public bool TryMoveUp(Vector3 fromWorldPosition) =>
-			TryMoveUp(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
+		public void MoveUp(Vector3 fromWorldPosition) =>
+			MoveUp(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
 
-		public bool TryMoveDown(int fromX, int fromY) =>
-			TryMoveDirection(fromX, fromY, 0, -1);
+		public void MoveDown(int fromX, int fromY) =>
+			MoveDirection(fromX, fromY, 0, -1);
 
-		public bool TryMoveDown(Vector2Int fromGridPosition) =>
-			TryMoveDown(fromGridPosition.x, fromGridPosition.y);
+		public void MoveDown(Vector2Int fromGridPosition) =>
+			MoveDown(fromGridPosition.x, fromGridPosition.y);
 
-		public bool TryMoveDown(Vector3 fromWorldPosition) =>
-			TryMoveDown(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
+		public void MoveDown(Vector3 fromWorldPosition) =>
+			MoveDown(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
 
-		public bool TryMoveRight(int fromX, int fromY) =>
-			TryMoveDirection(fromX, fromY, 1, 0);
+		public void MoveRight(int fromX, int fromY) =>
+			MoveDirection(fromX, fromY, 1, 0);
 
-		public bool TryMoveRight(Vector2Int fromGridPosition) =>
-			TryMoveRight(fromGridPosition.x, fromGridPosition.y);
+		public void MoveRight(Vector2Int fromGridPosition) =>
+			MoveRight(fromGridPosition.x, fromGridPosition.y);
 
-		public bool TryMoveRight(Vector3 fromWorldPosition) =>
-			TryMoveRight(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
+		public void MoveRight(Vector3 fromWorldPosition) =>
+			MoveRight(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
 
-		public bool TryMoveLeft(int fromX, int fromY) =>
-			TryMoveDirection(fromX, fromY, -1, 0);
+		public void MoveLeft(int fromX, int fromY) =>
+			MoveDirection(fromX, fromY, -1, 0);
 
-		public bool TryMoveLeft(Vector2Int fromGridPosition) =>
-			TryMoveLeft(fromGridPosition.x, fromGridPosition.y);
+		public void MoveLeft(Vector2Int fromGridPosition) =>
+			MoveLeft(fromGridPosition.x, fromGridPosition.y);
 
-		public bool TryMoveLeft(Vector3 fromWorldPosition) =>
-			TryMoveLeft(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
+		public void MoveLeft(Vector3 fromWorldPosition) =>
+			MoveLeft(CalculateGridPosition(fromWorldPosition, CellSize, Offset));
 
 		#endregion
 
 		#region Additional Methods
-		
+
 		public IEnumerable<KeyValuePair<Vector2Int, T>> GetAllKeyValuePairs() => cells;
 
 		public IEnumerable<Vector2Int> GetAllPositions() => cells.Keys;

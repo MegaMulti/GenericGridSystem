@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MegaMulti.BasicGenericGridSystem
+namespace MegaMulti.GenericGridSystem
 {
-	public class GenGrid<T>
+	public class GenericGrid<T>
 	{
 		private readonly int maxWidth;
 		private readonly int maxHeight;
